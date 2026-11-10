@@ -1,5 +1,5 @@
 // Écran « Mon véhicule » : formulaire du profil et résumé.
-import { CHAMPS, SEUIL_PAR_DEFAUT, lireProfil, enregistrerProfil, verifierProfil, doitEviterObstacles } from "./profil.js?v=0.2";
+import { CHAMPS, SEUIL_PAR_DEFAUT, lireProfil, enregistrerProfil, verifierProfil, doitEviterObstacles } from "./profil.js?v=0.3";
 
 const formulaire = document.getElementById("form-profil");
 const message = document.getElementById("message-profil");

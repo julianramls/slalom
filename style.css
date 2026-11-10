@@ -82,11 +82,12 @@ button { font: inherit; cursor: pointer; }
 
 .bouton-barre:active { background: rgba(255, 255, 255, 0.3); }
 
-/* Zone sous la barre : la carte, et le panneau du véhicule par-dessus. */
-.zone { position: relative; flex: 1; min-height: 0; }
+/* Zone sous la barre : la carte, la carte « Itinéraire » en dessous,
+   et le panneau du véhicule par-dessus le tout. */
+.zone { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
 
-.vue-carte, #carte { position: absolute; inset: 0; }
-#carte { background: #e8eaed; }
+.vue-carte { position: relative; flex: 1; min-height: 120px; }
+#carte { position: absolute; inset: 0; background: #e8eaed; }
 
 .panneau {
   position: absolute;
@@ -252,3 +253,163 @@ h2 { font-size: 18px; margin: 0 0 8px; }
 .resume ul { margin: 0; padding-left: 20px; }
 .resume li { margin: 6px 0; }
 .resume li.non { color: var(--gris); }
+
+/* ---------- Itinéraire ---------- */
+
+.trajet {
+  flex: none;
+  max-height: 62%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: var(--blanc);
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.15);
+  padding: 0 14px calc(12px + env(safe-area-inset-bottom));
+  z-index: 1100;
+}
+
+.poignee {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: 8px 0 10px;
+  border: 0;
+  background: transparent;
+  color: var(--texte);
+}
+
+.poignee-barre { width: 40px; height: 5px; border-radius: 3px; background: var(--bordure); margin-bottom: 6px; }
+.poignee-titre { font-weight: 700; font-size: 16px; }
+.poignee[aria-expanded="false"] .poignee-titre::after { content: "  ▴"; color: var(--gris); }
+.poignee[aria-expanded="true"] .poignee-titre::after { content: "  ▾"; color: var(--gris); }
+
+.trajet-corps { max-width: 520px; margin: 0 auto; }
+
+.ligne-point { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+
+.pastille {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;
+  line-height: 28px;
+  text-align: center;
+}
+
+.pastille.depart, .epingle.depart { background: #1e8e3e; }
+.pastille.arrivee, .epingle.arrivee { background: #c5221f; }
+
+.ligne-point input {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid var(--bordure);
+  border-radius: 10px;
+  font-size: 17px; /* 16 px minimum : évite le zoom automatique de l'iPhone */
+  background: #fff;
+  color: var(--texte);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.ligne-point input:focus { outline: none; border-color: var(--bleu); box-shadow: 0 0 0 3px rgba(11, 92, 173, 0.18); }
+.ligne-point input.ma-position { color: var(--bleu); font-weight: 600; }
+
+.bouton-icone {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--bordure);
+  border-radius: 10px;
+  background: #fff;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.bouton-icone:active { background: var(--bleu-clair); }
+
+.astuce { margin: 2px 0 4px; color: var(--gris); font-size: 13px; }
+
+.resultats { list-style: none; margin: 0 0 8px; padding: 0; border: 1px solid var(--bordure); border-radius: 10px; overflow: hidden; }
+.resultats li + li { border-top: 1px solid var(--bordure); }
+.resultat-info, .resultat-titre { padding: 10px 12px; color: var(--gris); font-size: 14px; }
+.resultat-titre { font-weight: 700; color: var(--texte); background: var(--fond); }
+
+.resultat {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  background: #fff;
+  text-align: left;
+  color: var(--texte);
+}
+
+.resultat:active { background: var(--bleu-clair); }
+.resultat strong { display: block; font-size: 16px; }
+.resultat span { display: block; font-size: 13px; color: var(--gris); margin-top: 2px; }
+
+.resultat-trajet { margin-top: 12px; }
+.resultat-chiffres { margin: 0 0 6px; font-size: 24px; font-weight: 800; }
+.resultat-ligne { margin: 6px 0; font-size: 15px; }
+.resultat-ligne.ok { color: var(--vert); font-weight: 600; }
+.resultat-ligne.attention { color: var(--orange); font-weight: 600; }
+.resultat-ligne.discret { color: var(--gris); }
+.resultat-liste { margin: 4px 0 8px; padding-left: 20px; color: var(--orange); font-size: 14px; }
+.resultat-source { margin: 6px 0 0; color: var(--gris); font-size: 12px; }
+
+/* Menu quand on touche la carte */
+.menu-carte { display: flex; flex-direction: column; gap: 8px; min-width: 170px; }
+
+.bouton-menu {
+  padding: 11px 12px;
+  border: 1px solid var(--bordure);
+  border-radius: 10px;
+  background: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: left;
+  color: var(--texte);
+}
+
+.bouton-menu:active { background: var(--bleu-clair); }
+
+/* Épingles départ / arrivée */
+.epingle {
+  width: 34px;
+  height: 34px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  border: 3px solid #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  display: grid;
+  place-items: center;
+}
+
+.epingle span { transform: rotate(45deg); color: #fff; font-weight: 800; font-size: 15px; }
+
+/* Obstacles sur la carte */
+.marque-obstacle {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  font-weight: 800;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.35);
+}
+
+.marque-obstacle.evite { background: #fff4e0; }
+.marque-obstacle.reste { background: var(--rouge); color: #fff; }
+
+.resultat-etapes { display: grid; grid-template-columns: 22px 1fr; gap: 4px 8px; align-items: center; margin: 0 0 8px; font-size: 14px; color: var(--gris); }
+.resultat-etapes .pastille { width: 22px; height: 22px; line-height: 22px; font-size: 11px; }
+.resultat-etapes span:not(.pastille) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rangee-boutons { display: flex; gap: 10px; margin-top: 12px; }
+.rangee-boutons .bouton-secondaire { flex: 1; padding: 12px; }

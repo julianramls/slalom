@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0b5cad">
   <title>Slalom</title>
   <link rel="stylesheet" href="lib/leaflet/leaflet.css">
-  <link rel="stylesheet" href="style.css?v=0.2">
+  <link rel="stylesheet" href="style.css?v=0.3">
 </head>
 <body>
   <header class="barre">
@@ -36,6 +36,34 @@
         </svg>
       </button>
     </main>
+
+    <!-- Itinéraire (en bas de l'écran) -->
+    <section id="trajet" class="trajet" aria-label="Itinéraire">
+      <button id="trajet-poignee" class="poignee" type="button" aria-expanded="true" aria-controls="trajet-corps">
+        <span class="poignee-barre" aria-hidden="true"></span>
+        <span id="trajet-titre" class="poignee-titre">Itinéraire</span>
+      </button>
+      <div id="trajet-corps" class="trajet-corps">
+        <div id="trajet-saisie">
+        <form id="form-depart" class="ligne-point" autocomplete="off">
+          <span class="pastille depart" aria-hidden="true">D</span>
+          <input id="saisie-depart" type="text" enterkeyhint="search" autocapitalize="off" spellcheck="false" autocomplete="off" placeholder="Départ : adresse ou lieu" aria-label="Départ">
+          <button type="button" id="depart-ma-position" class="bouton-icone" aria-label="Partir de ma position">📍</button>
+        </form>
+        <form id="form-arrivee" class="ligne-point" autocomplete="off">
+          <span class="pastille arrivee" aria-hidden="true">A</span>
+          <input id="saisie-arrivee" type="text" enterkeyhint="search" autocapitalize="off" spellcheck="false" autocomplete="off" placeholder="Arrivée : adresse ou lieu" aria-label="Arrivée">
+          <button type="button" id="inverser" class="bouton-icone" aria-label="Inverser le départ et l'arrivée">⇅</button>
+        </form>
+        <ul id="resultats" class="resultats" hidden></ul>
+        <p class="astuce">Tape une adresse puis « Rechercher » sur le clavier, ou touche la carte.</p>
+        <button id="calculer" class="bouton-principal" type="button">Calculer l'itinéraire</button>
+        <p id="trajet-etape" class="message info" role="status" aria-live="polite" hidden></p>
+        <p id="trajet-erreur" class="message ko" role="alert" hidden></p>
+        </div>
+        <div id="trajet-resultat" class="resultat-trajet" hidden></div>
+      </div>
+    </section>
 
     <!-- Profil du véhicule (panneau par-dessus la carte) -->
     <section id="vue-profil" class="panneau" aria-labelledby="titre-profil" hidden>
@@ -97,6 +125,6 @@
   </div>
 
   <script src="lib/leaflet/leaflet.js"></script>
-  <script type="module" src="js/app.js?v=0.2"></script>
+  <script type="module" src="js/app.js?v=0.3"></script>
 </body>
 </html>

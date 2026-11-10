@@ -1,11 +1,12 @@
 // Slalom : application de navigation pour voitures basses, larges ou longues.
-import { initVueProfil } from "./vue-profil.js?v=0.2";
-import { creerCarte, creerMarqueurPosition } from "./carte.js?v=0.2";
-import { lireDernierePosition, etatAutorisation, suivrePosition } from "./position.js?v=0.2";
+import { initVueProfil } from "./vue-profil.js?v=0.3";
+import { creerCarte, creerMarqueurPosition } from "./carte.js?v=0.3";
+import { lireDernierePosition, etatAutorisation, suivrePosition } from "./position.js?v=0.3";
+import { initVueTrajet } from "./vue-trajet.js?v=0.3";
 
 // Numéro de version affiché à l'écran : il permet de vérifier qu'on voit bien
 // la dernière version publiée (le navigateur garde parfois l'ancienne en mémoire).
-const VERSION = "0.2 (étape 2)";
+const VERSION = "0.3 (étape 3)";
 document.getElementById("version").textContent = "Version " + VERSION;
 
 // ---------- Panneau « Mon véhicule » ----------
@@ -39,6 +40,9 @@ if (!profil) {
 
 const carte = creerCarte("carte", lireDernierePosition());
 const marqueur = creerMarqueurPosition(carte);
+
+// La carte change de taille quand la carte « Itinéraire » s'agrandit ou se replie.
+new ResizeObserver(() => carte.invalidateSize()).observe(document.getElementById("carte"));
 
 const bandeau = document.getElementById("bandeau-position");
 const bandeauTexte = document.getElementById("bandeau-texte");
@@ -78,6 +82,7 @@ function demarrerSuivi() {
       masquerBandeau();
       marqueur.mettreAJour(p);
       boutonRecentrer.classList.add("actif");
+      vueTrajet.positionDisponible();
       if (centrerDesQuePossible) {
         centrerDesQuePossible = false;
         centrerSurMoi();
@@ -96,6 +101,14 @@ function demarrerSuivi() {
 }
 
 boutonAutoriser.addEventListener("click", demarrerSuivi);
+
+// ---------- Itinéraire ----------
+
+const vueTrajet = initVueTrajet({
+  carte,
+  obtenirPosition: () => positionActuelle,
+  ouvrirProfil,
+});
 
 boutonRecentrer.addEventListener("click", () => {
   if (positionActuelle) {
