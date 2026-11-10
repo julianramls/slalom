@@ -1,96 +1,116 @@
 // Slalom : application de navigation pour voitures basses, larges ou longues.
-import { CHAMPS, SEUIL_PAR_DEFAUT, lireProfil, enregistrerProfil, verifierProfil, doitEviterObstacles } from "./profil.js";
+import { initVueProfil } from "./vue-profil.js?v=0.2";
+import { creerCarte, creerMarqueurPosition } from "./carte.js?v=0.2";
+import { lireDernierePosition, etatAutorisation, suivrePosition } from "./position.js?v=0.2";
 
 // Numéro de version affiché à l'écran : il permet de vérifier qu'on voit bien
 // la dernière version publiée (le navigateur garde parfois l'ancienne en mémoire).
-const VERSION = "0.1 (étape 1)";
-
+const VERSION = "0.2 (étape 2)";
 document.getElementById("version").textContent = "Version " + VERSION;
 
-const formulaire = document.getElementById("form-profil");
-const message = document.getElementById("message-profil");
+// ---------- Panneau « Mon véhicule » ----------
 
-// Remplit le formulaire avec le profil enregistré (ou le seuil par défaut).
-function remplirFormulaire(profil) {
-  for (const cle of Object.keys(CHAMPS)) {
-    const champ = formulaire.elements[cle];
-    if (profil) champ.value = profil[cle];
-  }
-  if (!profil) formulaire.elements.seuil.value = SEUIL_PAR_DEFAUT;
+const panneauProfil = document.getElementById("vue-profil");
+const boutonVehicule = document.getElementById("bouton-vehicule");
+
+function ouvrirProfil() {
+  panneauProfil.hidden = false;
+  panneauProfil.scrollTop = 0;
+  boutonVehicule.textContent = "🗺️ Carte";
 }
 
-// Lit les valeurs tapées dans le formulaire (nombres entiers, en cm).
-function lireFormulaire() {
-  const profil = {};
-  for (const cle of Object.keys(CHAMPS)) {
-    const texte = formulaire.elements[cle].value.trim().replace(",", ".");
-    profil[cle] = texte === "" ? NaN : Math.round(Number(texte));
-  }
-  return profil;
+function fermerProfil() {
+  panneauProfil.hidden = true;
+  boutonVehicule.textContent = "🚗 Mon véhicule";
 }
 
-function afficherErreurs(erreurs) {
-  for (const cle of Object.keys(CHAMPS)) {
-    const bloc = formulaire.elements[cle].closest(".champ");
-    bloc.classList.toggle("invalide", Boolean(erreurs[cle]));
-    bloc.querySelector(".erreur").textContent = erreurs[cle] || "";
-  }
+boutonVehicule.addEventListener("click", () => (panneauProfil.hidden ? ouvrirProfil() : fermerProfil()));
+document.getElementById("fermer-profil").addEventListener("click", fermerProfil);
+
+const profil = initVueProfil({ surAllerCarte: fermerProfil });
+
+// Première visite : on commence par le profil du véhicule.
+if (!profil) {
+  document.getElementById("bienvenue").hidden = false;
+  ouvrirProfil();
 }
 
-// Explique en clair ce que l'appli va faire avec ce profil.
-function afficherResume(profil) {
-  const bloc = document.getElementById("resume-profil");
-  const liste = document.getElementById("resume-liste");
-  if (!profil) { bloc.hidden = true; return; }
+// ---------- Carte et position ----------
 
-  const lignes = [
-    `Les passages limités à moins de ${profil.hauteur} cm de hauteur.`,
-    `Les rues limitées à moins de ${profil.largeur} cm de largeur.`,
-    `Les rues limitées à moins de ${profil.longueur} cm de longueur.`,
-    `Les passages étroits que tu as signalés.`,
-  ];
-  liste.replaceChildren(...lignes.map((texte) => {
-    const li = document.createElement("li");
-    li.textContent = texte;
-    return li;
-  }));
+const carte = creerCarte("carte", lireDernierePosition());
+const marqueur = creerMarqueurPosition(carte);
 
-  const li = document.createElement("li");
-  if (doitEviterObstacles(profil)) {
-    li.textContent = `Les ralentisseurs et les obstacles signalés : ta garde au sol (${profil.garde} cm) est sous ton seuil (${profil.seuil} cm).`;
+const bandeau = document.getElementById("bandeau-position");
+const bandeauTexte = document.getElementById("bandeau-texte");
+const boutonAutoriser = document.getElementById("bouton-autoriser");
+const boutonRecentrer = document.getElementById("bouton-recentrer");
+
+const TEXTE_REFUS =
+  "Slalom n'a pas accès à ta position.\n\n" +
+  "Sur iPhone : ouvre l'appli Réglages → Confidentialité et sécurité → Service de localisation. " +
+  "Vérifie qu'il est activé, puis touche Chrome (ou « Sites web Safari ») et choisis « Lorsque l'app est active ».\n\n" +
+  "Reviens ensuite ici et recharge la page.";
+
+function afficherBandeau(texte, avecBouton = false) {
+  bandeauTexte.textContent = texte;
+  boutonAutoriser.hidden = !avecBouton;
+  bandeau.hidden = false;
+}
+
+function masquerBandeau() {
+  bandeau.hidden = true;
+}
+
+let positionActuelle = null;
+let arreterSuivi = null;
+let centrerDesQuePossible = true;
+
+function centrerSurMoi() {
+  carte.setView([positionActuelle.lat, positionActuelle.lon], Math.max(carte.getZoom(), 16));
+}
+
+function demarrerSuivi() {
+  if (arreterSuivi) return;
+  afficherBandeau("Recherche de ta position…");
+  arreterSuivi = suivrePosition(
+    (p) => {
+      positionActuelle = p;
+      masquerBandeau();
+      marqueur.mettreAJour(p);
+      boutonRecentrer.classList.add("actif");
+      if (centrerDesQuePossible) {
+        centrerDesQuePossible = false;
+        centrerSurMoi();
+      }
+    },
+    (erreur) => {
+      if (erreur.code === erreur.PERMISSION_DENIED) {
+        arreterSuivi();
+        arreterSuivi = null;
+        afficherBandeau(TEXTE_REFUS);
+      } else if (!positionActuelle) {
+        afficherBandeau("Position introuvable pour l'instant. Vérifie que la localisation est activée, puis touche le bouton ◎ en bas à droite.");
+      }
+    },
+  );
+}
+
+boutonAutoriser.addEventListener("click", demarrerSuivi);
+
+boutonRecentrer.addEventListener("click", () => {
+  if (positionActuelle) {
+    centrerSurMoi();
   } else {
-    li.className = "non";
-    li.textContent = `Pas d'évitement des ralentisseurs : ta garde au sol (${profil.garde} cm) n'est pas sous ton seuil (${profil.seuil} cm).`;
+    centrerDesQuePossible = true;
+    demarrerSuivi();
   }
-  liste.append(li);
-  bloc.hidden = false;
-}
-
-formulaire.addEventListener("submit", (evenement) => {
-  evenement.preventDefault();
-  const profil = lireFormulaire();
-  const { ok, erreurs } = verifierProfil(profil);
-  afficherErreurs(erreurs);
-
-  if (!ok) {
-    message.className = "message ko";
-    message.textContent = "Vérifie les champs en rouge.";
-    return;
-  }
-  if (!enregistrerProfil(profil)) {
-    message.className = "message ko";
-    message.textContent = "Impossible d'enregistrer sur ce téléphone (navigation privée ?).";
-    return;
-  }
-  message.className = "message ok";
-  message.textContent = "✓ Profil enregistré";
-  afficherResume(profil);
-  document.activeElement?.blur(); // referme le clavier
 });
 
-// Efface le message de confirmation dès qu'on modifie une valeur.
-formulaire.addEventListener("input", () => { message.textContent = ""; });
-
-const profilEnregistre = lireProfil();
-remplirFormulaire(profilEnregistre);
-afficherResume(profilEnregistre);
+// Au démarrage : si la position est déjà autorisée, on la suit tout de suite.
+// Sinon, on explique pourquoi on en a besoin avant que le téléphone ne demande.
+etatAutorisation().then((etat) => {
+  if (etat === "granted") demarrerSuivi();
+  else if (etat === "denied") afficherBandeau(TEXTE_REFUS);
+  else if (etat === "indisponible") afficherBandeau("Ce navigateur ne permet pas de connaître ta position.");
+  else afficherBandeau("Slalom a besoin de ta position pour centrer la carte sur toi. Ton téléphone va te demander l'autorisation.", true);
+});

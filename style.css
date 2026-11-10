@@ -1,6 +1,7 @@
 :root {
   --bleu: #0b5cad;
   --bleu-fonce: #084a8c;
+  --bleu-clair: #f0f6fd;
   --fond: #f4f6f9;
   --blanc: #ffffff;
   --texte: #1c2430;
@@ -16,6 +17,9 @@
 
 * { box-sizing: border-box; }
 
+/* Un élément marqué « hidden » est toujours caché, quel que soit son style. */
+[hidden] { display: none !important; }
+
 html, body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -24,20 +28,31 @@ html, body {
   -webkit-text-size-adjust: 100%;
 }
 
+/* L'appli occupe tout l'écran : barre en haut, carte en dessous. */
+body {
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+button { font: inherit; cursor: pointer; }
+
 /* Barre du haut */
 .barre {
-  position: sticky;
-  top: 0;
-  z-index: 10;
+  flex: none;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
+  padding: calc(10px + env(safe-area-inset-top)) 12px 10px 16px;
   background: var(--bleu);
   color: #fff;
+  z-index: 2000;
 }
 
 .logo-petit {
+  flex: none;
   width: 34px;
   height: 34px;
   border-radius: 10px;
@@ -49,18 +64,97 @@ html, body {
   text-align: center;
 }
 
-.barre-titre { display: flex; flex-direction: column; line-height: 1.15; }
+.barre-titre { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
 .barre-titre strong { font-size: 18px; }
-.barre-version { font-size: 12px; opacity: 0.85; }
+.barre-version { font-size: 12px; opacity: 0.85; white-space: nowrap; }
 
-/* Contenu */
+.bouton-barre {
+  margin-left: auto;
+  flex: none;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.bouton-barre:active { background: rgba(255, 255, 255, 0.3); }
+
+/* Zone sous la barre : la carte, et le panneau du véhicule par-dessus. */
+.zone { position: relative; flex: 1; min-height: 0; }
+
+.vue-carte, #carte { position: absolute; inset: 0; }
+#carte { background: #e8eaed; }
+
+.panneau {
+  position: absolute;
+  inset: 0;
+  z-index: 1500; /* au-dessus de la carte et de ses boutons */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: var(--fond);
+}
+
+/* Bouton rond « me localiser » */
+.bouton-rond {
+  position: absolute;
+  right: 14px;
+  bottom: calc(34px + env(safe-area-inset-bottom));
+  z-index: 1000;
+  width: 54px;
+  height: 54px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--bleu);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+  display: grid;
+  place-items: center;
+}
+
+.bouton-rond:active { background: var(--bleu-clair); }
+.bouton-rond.actif { color: #fff; background: var(--bleu); }
+
+/* Bandeau d'information sur la carte (autorisation de position, erreurs) */
+.bandeau {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 12px;
+  z-index: 1000;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 14px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+}
+
+.bandeau p { margin: 0; white-space: pre-line; }
+.bandeau .bouton-principal { margin-top: 12px; }
+
+/* Point bleu de ma position */
+.ma-position {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #1a73e8;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15), 0 1px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Contenu du panneau */
 .contenu {
   max-width: 520px;
   margin: 0 auto;
   padding: 20px 16px calc(32px + env(safe-area-inset-bottom));
 }
 
-h1 { font-size: 26px; margin: 0 0 6px; }
+.titre-ligne { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+
+h1 { font-size: 26px; margin: 0; }
 h2 { font-size: 18px; margin: 0 0 8px; }
 .intro { color: var(--gris); margin: 0 0 20px; }
 
@@ -109,7 +203,7 @@ h2 { font-size: 18px; margin: 0 0 8px; }
 .erreur { margin: 6px 0 0; color: var(--rouge); font-size: 14px; }
 .erreur:empty { display: none; }
 
-.champ-seuil { background: #f0f6fd; }
+.champ-seuil { background: var(--bleu-clair); }
 
 .bouton-principal {
   display: block;
@@ -126,10 +220,25 @@ h2 { font-size: 18px; margin: 0 0 8px; }
 
 .bouton-principal:active { background: var(--bleu-fonce); }
 
+.bouton-secondaire {
+  flex: none;
+  padding: 10px 14px;
+  border: 1px solid var(--bordure);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--bleu);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.bouton-secondaire:active { background: var(--bleu-clair); }
+.bouton-large { display: block; width: 100%; margin-top: 10px; padding: 14px; }
+
 .message { margin: 12px 0 0; padding: 12px; border-radius: 10px; font-weight: 600; }
 .message:empty { display: none; }
 .message.ok { background: var(--vert-fond); color: var(--vert); }
 .message.ko { background: var(--rouge-fond); color: var(--rouge); }
+.message.info { background: var(--bleu-clair); color: var(--bleu-fonce); margin: 6px 0 14px; }
 
 /* Résumé */
 .resume {

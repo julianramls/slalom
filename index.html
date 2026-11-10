@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0b5cad">
   <title>Slalom</title>
-  <link rel="stylesheet" href="style.css?v=0.1">
+  <link rel="stylesheet" href="lib/leaflet/leaflet.css">
+  <link rel="stylesheet" href="style.css?v=0.2">
 </head>
 <body>
   <header class="barre">
@@ -14,60 +15,88 @@
       <strong>Slalom</strong>
       <span id="version" class="barre-version"></span>
     </div>
+    <button id="bouton-vehicule" class="bouton-barre" type="button">🚗 Mon véhicule</button>
   </header>
 
-  <main class="contenu">
-    <section id="vue-profil" aria-labelledby="titre-profil">
-      <h1 id="titre-profil">Mon véhicule</h1>
-      <p class="intro">Saisis les mesures de ta voiture en centimètres. Elles restent enregistrées sur ce téléphone.</p>
+  <div class="zone">
+    <!-- Carte -->
+    <main id="vue-carte" class="vue-carte">
+      <div id="carte" aria-label="Carte"></div>
 
-      <form id="form-profil" novalidate>
-        <div class="champ">
-          <label for="hauteur">Hauteur</label>
-          <p class="aide">Du sol jusqu'au point le plus haut (toit, antenne, coffre de toit).</p>
-          <div class="saisie"><input id="hauteur" name="hauteur" type="number" inputmode="numeric" min="50" max="450" placeholder="ex. 120"><span>cm</span></div>
-          <p class="erreur" data-pour="hauteur"></p>
+      <div id="bandeau-position" class="bandeau" hidden>
+        <p id="bandeau-texte"></p>
+        <button id="bouton-autoriser" class="bouton-principal" type="button" hidden>Utiliser ma position</button>
+      </div>
+
+      <button id="bouton-recentrer" class="bouton-rond" type="button" aria-label="Centrer la carte sur ma position">
+        <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+          <circle cx="12" cy="12" r="4" fill="currentColor"/>
+          <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/>
+          <path d="M12 1v4M12 19v4M1 12h4M19 12h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </main>
+
+    <!-- Profil du véhicule (panneau par-dessus la carte) -->
+    <section id="vue-profil" class="panneau" aria-labelledby="titre-profil" hidden>
+      <div class="contenu">
+        <div class="titre-ligne">
+          <h1 id="titre-profil">Mon véhicule</h1>
+          <button id="fermer-profil" class="bouton-secondaire" type="button">✕ Fermer</button>
         </div>
+        <p id="bienvenue" class="message info" hidden>Bienvenue&nbsp;! Commence par saisir les mesures de ta voiture.</p>
+        <p class="intro">Saisis les mesures de ta voiture en centimètres. Elles restent enregistrées sur ce téléphone.</p>
 
-        <div class="champ">
-          <label for="largeur">Largeur</label>
-          <p class="aide">Rétroviseurs compris, pour garder une marge de sécurité.</p>
-          <div class="saisie"><input id="largeur" name="largeur" type="number" inputmode="numeric" min="100" max="350" placeholder="ex. 210"><span>cm</span></div>
-          <p class="erreur" data-pour="largeur"></p>
+        <form id="form-profil" novalidate>
+          <div class="champ">
+            <label for="hauteur">Hauteur</label>
+            <p class="aide">Du sol jusqu'au point le plus haut (toit, antenne, coffre de toit).</p>
+            <div class="saisie"><input id="hauteur" name="hauteur" type="number" inputmode="numeric" min="50" max="450" placeholder="ex. 120"><span>cm</span></div>
+            <p class="erreur" data-pour="hauteur"></p>
+          </div>
+
+          <div class="champ">
+            <label for="largeur">Largeur</label>
+            <p class="aide">Rétroviseurs compris, pour garder une marge de sécurité.</p>
+            <div class="saisie"><input id="largeur" name="largeur" type="number" inputmode="numeric" min="100" max="350" placeholder="ex. 210"><span>cm</span></div>
+            <p class="erreur" data-pour="largeur"></p>
+          </div>
+
+          <div class="champ">
+            <label for="longueur">Longueur</label>
+            <p class="aide">Du pare-chocs avant au pare-chocs arrière.</p>
+            <div class="saisie"><input id="longueur" name="longueur" type="number" inputmode="numeric" min="200" max="2000" placeholder="ex. 470"><span>cm</span></div>
+            <p class="erreur" data-pour="longueur"></p>
+          </div>
+
+          <div class="champ">
+            <label for="garde">Garde au sol</label>
+            <p class="aide">Distance entre le sol et le point le plus bas de la voiture.</p>
+            <div class="saisie"><input id="garde" name="garde" type="number" inputmode="numeric" min="2" max="60" placeholder="ex. 10"><span>cm</span></div>
+            <p class="erreur" data-pour="garde"></p>
+          </div>
+
+          <div class="champ champ-seuil">
+            <label for="seuil">Seuil d'évitement des obstacles</label>
+            <p class="aide">Si ta garde au sol est inférieure à ce seuil, Slalom évitera les ralentisseurs et les obstacles signalés.</p>
+            <div class="saisie"><input id="seuil" name="seuil" type="number" inputmode="numeric" min="2" max="60" placeholder="12"><span>cm</span></div>
+            <p class="erreur" data-pour="seuil"></p>
+          </div>
+
+          <button type="submit" class="bouton-principal">Enregistrer</button>
+          <p id="message-profil" class="message" role="status" aria-live="polite"></p>
+          <button id="aller-carte" class="bouton-secondaire bouton-large" type="button" hidden>Voir la carte →</button>
+        </form>
+
+        <div id="resume-profil" class="resume" hidden>
+          <h2>Ce que Slalom évitera</h2>
+          <ul id="resume-liste"></ul>
         </div>
-
-        <div class="champ">
-          <label for="longueur">Longueur</label>
-          <p class="aide">Du pare-chocs avant au pare-chocs arrière.</p>
-          <div class="saisie"><input id="longueur" name="longueur" type="number" inputmode="numeric" min="200" max="2000" placeholder="ex. 470"><span>cm</span></div>
-          <p class="erreur" data-pour="longueur"></p>
-        </div>
-
-        <div class="champ">
-          <label for="garde">Garde au sol</label>
-          <p class="aide">Distance entre le sol et le point le plus bas de la voiture.</p>
-          <div class="saisie"><input id="garde" name="garde" type="number" inputmode="numeric" min="2" max="60" placeholder="ex. 10"><span>cm</span></div>
-          <p class="erreur" data-pour="garde"></p>
-        </div>
-
-        <div class="champ champ-seuil">
-          <label for="seuil">Seuil d'évitement des obstacles</label>
-          <p class="aide">Si ta garde au sol est inférieure à ce seuil, Slalom évitera les ralentisseurs et les obstacles signalés.</p>
-          <div class="saisie"><input id="seuil" name="seuil" type="number" inputmode="numeric" min="2" max="60" placeholder="12"><span>cm</span></div>
-          <p class="erreur" data-pour="seuil"></p>
-        </div>
-
-        <button type="submit" class="bouton-principal">Enregistrer</button>
-        <p id="message-profil" class="message" role="status" aria-live="polite"></p>
-      </form>
-
-      <div id="resume-profil" class="resume" hidden>
-        <h2>Ce que Slalom évitera</h2>
-        <ul id="resume-liste"></ul>
       </div>
     </section>
-  </main>
+  </div>
 
-  <script type="module" src="js/app.js?v=0.1"></script>
+  <script src="lib/leaflet/leaflet.js"></script>
+  <script type="module" src="js/app.js?v=0.2"></script>
 </body>
 </html>

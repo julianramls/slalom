@@ -9,7 +9,7 @@ gratuitement avec GitHub Pages.
 
 - [x] Étape 0 : mise en ligne
 - [x] Étape 1 : profil du véhicule
-- [ ] Étape 2 : carte centrée sur ma position
+- [x] Étape 2 : carte centrée sur ma position
 - [ ] Étape 3 : itinéraire (évite les rues trop basses, étroites ou limitées en longueur)
 - [ ] Étape 4 : évitement des ralentisseurs selon la garde au sol
 - [ ] Étape 5 : signalement d'obstacles
@@ -17,7 +17,7 @@ gratuitement avec GitHub Pages.
 
 ## Services utilisés (gratuits, sans clé)
 
-- Carte : OpenStreetMap
+- Carte : OpenStreetMap, affichée avec la bibliothèque Leaflet 1.9.4 (copiée dans `lib/leaflet`, licence BSD-2)
 - Itinéraires : Valhalla (serveur public FOSSGIS)
 - Recherche d'adresses : Nominatim (OpenStreetMap)
 - Ralentisseurs et limitations : Overpass API (données OpenStreetMap)
