@@ -8,7 +8,7 @@ gratuitement avec GitHub Pages.
 ## Avancement
 
 - [x] Étape 0 : mise en ligne
-- [ ] Étape 1 : profil du véhicule
+- [x] Étape 1 : profil du véhicule
 - [ ] Étape 2 : carte centrée sur ma position
 - [ ] Étape 3 : itinéraire (évite les rues trop basses, étroites ou limitées en longueur)
 - [ ] Étape 4 : évitement des ralentisseurs selon la garde au sol
