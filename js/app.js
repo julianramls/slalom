@@ -1,12 +1,12 @@
 // Slalom : application de navigation pour voitures basses, larges ou longues.
-import { initVueProfil } from "./vue-profil.js?v=0.3";
-import { creerCarte, creerMarqueurPosition } from "./carte.js?v=0.3";
-import { lireDernierePosition, etatAutorisation, suivrePosition } from "./position.js?v=0.3";
-import { initVueTrajet } from "./vue-trajet.js?v=0.3";
+import { initVueProfil } from "./vue-profil.js?v=0.4";
+import { creerCarte, creerMarqueurPosition } from "./carte.js?v=0.4";
+import { lireDernierePosition, etatAutorisation, suivrePosition } from "./position.js?v=0.4";
+import { initVueTrajet } from "./vue-trajet.js?v=0.4";
 
 // Numéro de version affiché à l'écran : il permet de vérifier qu'on voit bien
 // la dernière version publiée (le navigateur garde parfois l'ancienne en mémoire).
-const VERSION = "0.3 (étape 3)";
+const VERSION = "0.3.1 (étape 3)";
 document.getElementById("version").textContent = "Version " + VERSION;
 
 // ---------- Panneau « Mon véhicule » ----------

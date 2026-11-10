@@ -1,6 +1,6 @@
 // Données OpenStreetMap le long d'un trajet, via le service Overpass :
 // limitations de hauteur, largeur et longueur (et plus tard ralentisseurs).
-import { simplifier, echantillonner, distanceM } from "./geo.js?v=0.3";
+import { echantillonner, distanceM } from "./geo.js?v=0.4";
 
 // Plusieurs serveurs Overpass publics : si le premier ne répond pas, on essaie le suivant.
 const SERVEURS_OVERPASS = [
@@ -9,10 +9,12 @@ const SERVEURS_OVERPASS = [
   "https://overpass.kumi.systems/api/interpreter",
 ];
 
-// Taille des morceaux de trajet envoyés à Overpass (les longs trajets sont
-// découpés en plusieurs morceaux pour garder une recherche précise).
-const POINTS_PAR_MORCEAU = 250;
-const MAX_POINTS_TOTAL = 1000;
+// Le trajet est découpé en tronçons d'au moins 3 km ; pour chaque tronçon, on
+// demande seulement les rues limitées du petit rectangle qui l'entoure. Ce type
+// de recherche est très rapide pour Overpass. Au plus 60 rectangles par requête.
+const LONGUEUR_TRONCON_MIN_M = 3000;
+const MAX_RECTANGLES = 60;
+const MARGE_DEGRES = 0.0003; // environ 30 m autour du trajet
 
 // Lit une limite OpenStreetMap (« 3.5 », « 3,5 m », « 11'6" », « 12 ft »…)
 // et la renvoie en mètres. Renvoie null si la valeur n'est pas un nombre
@@ -57,34 +59,40 @@ function limitationsBloquantes(tags, profil) {
   return resultat;
 }
 
-// Ligne simplifiée (au plus MAX_POINTS_TOTAL points), découpée en morceaux.
-function morceauxSimplifies(points) {
-  let tolerance = 4;
-  let ligne = simplifier(points, tolerance);
-  while (ligne.length > MAX_POINTS_TOTAL) {
-    tolerance *= 2;
-    ligne = simplifier(points, tolerance);
+// Rectangles (sud, ouest, nord, est) qui couvrent les trajets tronçon par tronçon.
+function rectangles(trajets) {
+  const longueurs = trajets.map((points) => {
+    let total = 0;
+    for (let i = 1; i < points.length; i++) total += distanceM(points[i - 1], points[i]);
+    return total;
+  });
+  const longueurTroncon = Math.max(LONGUEUR_TRONCON_MIN_M, longueurs.reduce((a, b) => a + b, 0) / MAX_RECTANGLES);
+  const resultat = [];
+  for (const points of trajets) {
+    let s = 90, o = 180, n = -90, e = -180, parcouru = 0;
+    for (let i = 0; i < points.length; i++) {
+      const [la, lo] = points[i];
+      s = Math.min(s, la); n = Math.max(n, la); o = Math.min(o, lo); e = Math.max(e, lo);
+      if (i > 0) parcouru += distanceM(points[i - 1], points[i]);
+      if (parcouru >= longueurTroncon || i === points.length - 1) {
+        resultat.push([s - MARGE_DEGRES, o - MARGE_DEGRES, n + MARGE_DEGRES, e + MARGE_DEGRES].map((v) => v.toFixed(4)).join(","));
+        // le tronçon suivant repart du point actuel
+        s = n = la; o = e = lo; parcouru = 0;
+      }
+    }
   }
-  const morceaux = [];
-  for (let i = 0; i < ligne.length - 1; i += POINTS_PAR_MORCEAU - 1) {
-    morceaux.push(ligne.slice(i, i + POINTS_PAR_MORCEAU));
-  }
-  return { morceaux, tolerance };
+  return [...new Set(resultat)];
 }
 
 function construireRequete(trajets) {
   const instructions = [];
-  for (const points of trajets) {
-    const { morceaux, tolerance } = morceauxSimplifies(points);
-    const rayon = Math.ceil(tolerance + 8);
-    for (const morceau of morceaux) {
-      const coords = morceau.map(([la, lo]) => la.toFixed(5) + "," + lo.toFixed(5)).join(",");
-      const autour = `around:${rayon},${coords}`;
-      instructions.push(`way(${autour})["highway"][~"^max(height|width|length)(:physical)?$"~"."];`);
-      instructions.push(`node(${autour})[~"^max(height|width)(:physical)?$"~"."];`);
+  for (const r of rectangles(trajets)) {
+    for (const cle of ["maxheight", "maxheight:physical", "maxwidth", "maxwidth:physical", "maxlength"]) {
+      instructions.push(`way["${cle}"]["highway"](${r});`);
     }
+    instructions.push(`node["maxheight"](${r});`, `node["maxwidth"](${r});`);
   }
-  return `[out:json][timeout:18];(${instructions.join("")});out geom;`;
+  return `[out:json][timeout:12];(${instructions.join("")});out geom;`;
 }
 
 async function interrogerOverpass(requete) {
@@ -92,7 +100,7 @@ async function interrogerOverpass(requete) {
   for (const [rang, serveur] of SERVEURS_OVERPASS.entries()) {
     const controle = new AbortController();
     // On attend plus longtemps le serveur principal que les serveurs de secours.
-    const minuteur = setTimeout(() => controle.abort(), rang === 0 ? 20000 : 12000);
+    const minuteur = setTimeout(() => controle.abort(), rang === 0 ? 15000 : 10000);
     try {
       const reponse = await fetch(serveur, {
         method: "POST",

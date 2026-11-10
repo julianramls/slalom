@@ -1,14 +1,14 @@
 // Calcul d'un itinéraire adapté au véhicule.
 //
-// 1. On calcule un trajet « classique » (comme un GPS ordinaire) et un trajet
-//    tenant compte de la hauteur et de la largeur du véhicule.
+// 1. On calcule un trajet tenant compte de la hauteur et de la largeur du
+//    véhicule (affiché tout de suite), puis un trajet « classique » (GPS ordinaire).
 // 2. On cherche dans OpenStreetMap les limitations de gabarit sur ces trajets.
 // 3. Tant que le trajet adapté passe par une limitation, on recalcule en lui
 //    demandant d'éviter ces endroits (4 essais au maximum).
 // 4. On compare avec le trajet classique pour compter les obstacles évités.
-import { calculerTrajet, MAX_POINTS_EVITES, MAX_ZONES_EVITEES } from "./valhalla.js?v=0.3";
-import { chercherObstaclesOSM, surLeTrajet, proches } from "./osm.js?v=0.3";
-import { indexerTrajet } from "./geo.js?v=0.3";
+import { calculerTrajet, MAX_POINTS_EVITES, MAX_ZONES_EVITEES } from "./valhalla.js?v=0.4";
+import { chercherObstaclesOSM, surLeTrajet, proches } from "./osm.js?v=0.4";
+import { indexerTrajet } from "./geo.js?v=0.4";
 
 const MAX_TOURS = 4;
 const MAX_EVITEMENTS = MAX_POINTS_EVITES + MAX_ZONES_EVITEES;
@@ -25,10 +25,14 @@ function obstaclesSur(trajet, obstacles) {
   return resultat;
 }
 
-export async function calculerItineraire(depart, arrivee, profil, surEtape = () => {}) {
+// `surEtape(texte)` décrit l'avancement ; `surProvisoire(resultat)` reçoit un
+// premier trajet dès qu'il est calculé, avant la vérification OpenStreetMap.
+export async function calculerItineraire(depart, arrivee, profil, { surEtape = () => {}, surProvisoire = () => {} } = {}) {
   surEtape("Calcul du trajet…");
-  const classique = await calculerTrajet(depart, arrivee, null);
   const adapte = await calculerTrajet(depart, arrivee, profil);
+  surProvisoire({ trajet: adapte, classique: null, evites: [], restants: [], verification: { enCours: true } });
+  surEtape("Comparaison avec un GPS classique…");
+  const classique = await calculerTrajet(depart, arrivee, null);
 
   // Tous les obstacles OpenStreetMap rencontrés, par identifiant.
   const connus = new Map();

@@ -413,3 +413,4 @@ h2 { font-size: 18px; margin: 0 0 8px; }
 .resultat-etapes span:not(.pastille) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rangee-boutons { display: flex; gap: 10px; margin-top: 12px; }
 .rangee-boutons .bouton-secondaire { flex: 1; padding: 12px; }
+.resultat-ligne.verification-en-cours { color: var(--bleu-fonce); font-weight: 600; }

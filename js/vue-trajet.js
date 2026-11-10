@@ -1,12 +1,12 @@
 // Carte « Itinéraire » en bas de l'écran : choix du départ et de l'arrivée,
 // calcul et affichage du résultat.
 /* global L */
-import { rechercherAdresse, adresseDuPoint } from "./geocodage.js?v=0.3";
-import { calculerItineraire } from "./itineraire.js?v=0.3";
-import { decrireObstacle } from "./osm.js?v=0.3";
-import { lireProfil } from "./profil.js?v=0.3";
-import { creerEpingle, creerCoucheTrajet } from "./carte.js?v=0.3";
-import { distanceM } from "./geo.js?v=0.3";
+import { rechercherAdresse, adresseDuPoint } from "./geocodage.js?v=0.4";
+import { calculerItineraire } from "./itineraire.js?v=0.4";
+import { decrireObstacle } from "./osm.js?v=0.4";
+import { lireProfil } from "./profil.js?v=0.4";
+import { creerEpingle, creerCoucheTrajet } from "./carte.js?v=0.4";
+import { distanceM } from "./geo.js?v=0.4";
 
 const $ = (id) => document.getElementById(id);
 
@@ -47,7 +47,9 @@ export function initVueTrajet({ carte, obtenirPosition, ouvrirProfil }) {
   const corps = $("trajet-corps");
   const poignee = $("trajet-poignee");
   const titre = $("trajet-titre");
-  let calculEnCours = false;
+  // Numéro du calcul en cours : un résultat qui arrive après « Effacer » ou
+  // après un nouveau calcul est ignoré.
+  let numeroCalcul = 0;
 
   // ---------- Affichage ----------
 
@@ -59,9 +61,14 @@ export function initVueTrajet({ carte, obtenirPosition, ouvrirProfil }) {
   function afficherEtape(texte) {
     zoneEtape.textContent = texte;
     zoneEtape.hidden = !texte;
+    const ligne = zoneResultat.querySelector(".verification-en-cours");
+    if (ligne && texte) ligne.textContent = "🔄 " + texte;
   }
 
   function effacerResultat() {
+    numeroCalcul++;
+    boutonCalculer.disabled = false;
+    afficherEtape("");
     couche.effacer();
     zoneResultat.hidden = true;
     zoneResultat.replaceChildren();
@@ -224,7 +231,7 @@ export function initVueTrajet({ carte, obtenirPosition, ouvrirProfil }) {
   }
 
   async function calculer() {
-    if (calculEnCours) return;
+    if (boutonCalculer.disabled) return;
     afficherErreur("");
     const profil = lireProfil();
     if (!profil) {
@@ -242,26 +249,43 @@ export function initVueTrajet({ carte, obtenirPosition, ouvrirProfil }) {
       return;
     }
 
-    calculEnCours = true;
-    boutonCalculer.disabled = true;
-    boutonCalculer.textContent = "Calcul en cours…";
     listeResultats.hidden = true;
     effacerResultat();
+    const jeton = numeroCalcul;
+    const actuel = () => jeton === numeroCalcul;
+    boutonCalculer.disabled = true;
     boutonCalculer.textContent = "Calcul en cours…";
-    try {
-      const resultat = await calculerItineraire(depart, arrivee, profil, afficherEtape);
+
+    // Affiche un trajet : d'abord le provisoire, puis le définitif.
+    let dejaCadre = false;
+    const montrer = (resultat) => {
+      if (!actuel()) return;
       const limitesTrajet = couche.afficher(resultat, decrireObstacle);
-      carte.fitBounds(limitesTrajet, { padding: [40, 40] });
+      if (!dejaCadre) carte.fitBounds(limitesTrajet, { padding: [40, 40] });
+      dejaCadre = true;
       afficherResultat(resultat, profil, depart, arrivee);
-      boutonCalculer.textContent = "Recalculer";
       montrerSaisie(false);
+    };
+
+    try {
+      const resultat = await calculerItineraire(depart, arrivee, profil, {
+        surEtape: (texte) => actuel() && afficherEtape(texte),
+        surProvisoire: montrer,
+      });
+      montrer(resultat);
     } catch (erreur) {
+      if (!actuel()) return;
+      couche.effacer();
+      zoneResultat.hidden = true;
+      montrerSaisie(true);
+      titre.textContent = "Itinéraire";
       afficherErreur(erreur.message || "Le calcul a échoué. Réessaie dans un instant.");
-      boutonCalculer.textContent = "Calculer l'itinéraire";
     } finally {
-      afficherEtape("");
-      calculEnCours = false;
-      boutonCalculer.disabled = false;
+      if (actuel()) {
+        afficherEtape("");
+        boutonCalculer.disabled = false;
+        boutonCalculer.textContent = zoneResultat.hidden ? "Calculer l'itinéraire" : "Recalculer";
+      }
     }
   }
 
@@ -277,7 +301,9 @@ export function initVueTrajet({ carte, obtenirPosition, ouvrirProfil }) {
     blocs.push(etapes);
     blocs.push(element("p", "resultat-ligne", `Adapté à ton véhicule : ${profil.hauteur} cm de haut, ${profil.largeur} cm de large, ${profil.longueur} cm de long.`));
 
-    if (verification.ok) {
+    if (verification.enCours) {
+      blocs.push(element("p", "resultat-ligne verification-en-cours", "🔄 Vérification des limitations dans OpenStreetMap…"));
+    } else if (verification.ok) {
       if (evites.length) {
         blocs.push(element("p", "resultat-ligne ok", `✓ ${pluriel(evites.length, "limitation de gabarit évitée", "limitations de gabarit évitées")} par rapport à un GPS classique.`));
       } else {
@@ -295,12 +321,14 @@ export function initVueTrajet({ carte, obtenirPosition, ouvrirProfil }) {
       blocs.push(liste);
     }
 
-    const ecart = Math.abs(classique.distanceKm - trajet.distanceKm);
-    if (ecart > 0.05 || Math.abs(classique.dureeS - trajet.dureeS) > 30) {
-      blocs.push(element("p", "resultat-ligne discret",
-        `Un GPS classique ferait ${formaterDuree(classique.dureeS)} · ${formaterDistance(classique.distanceKm)} (en pointillés gris sur la carte).`));
-    } else {
-      blocs.push(element("p", "resultat-ligne discret", "C'est le même trajet qu'un GPS classique."));
+    if (classique) {
+      const ecart = Math.abs(classique.distanceKm - trajet.distanceKm);
+      if (ecart > 0.05 || Math.abs(classique.dureeS - trajet.dureeS) > 30) {
+        blocs.push(element("p", "resultat-ligne discret",
+          `Un GPS classique ferait ${formaterDuree(classique.dureeS)} · ${formaterDistance(classique.distanceKm)} (en pointillés gris sur la carte).`));
+      } else {
+        blocs.push(element("p", "resultat-ligne discret", "C'est le même trajet qu'un GPS classique."));
+      }
     }
     if (verification.ok && verification.serveur) {
       blocs.push(element("p", "resultat-source", `Données vérifiées dans OpenStreetMap (${verification.serveur}).`));

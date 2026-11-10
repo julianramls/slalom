@@ -1,6 +1,6 @@
 // Calcul d'itinéraire avec Valhalla (serveur public FOSSGIS, gratuit, sans clé).
 // Règles d'usage : une requête par seconde au maximum.
-import { decoderPolyligne } from "./geo.js?v=0.3";
+import { decoderPolyligne } from "./geo.js?v=0.4";
 
 const VALHALLA = "https://valhalla1.openstreetmap.de/route";
 
